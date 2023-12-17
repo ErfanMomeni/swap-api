@@ -19,3 +19,9 @@ Get currency symbols.
 ```http
 GET /symbols
 ```
+
+Convert an amount from one currency to another.
+
+```http
+GET /convert?amount=50&from=USD&to=EUR
+```
