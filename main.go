@@ -12,30 +12,26 @@ import (
 )
 
 type Symbols struct {
-	Success bool              `json:"success"`
 	Symbols map[string]string `json:"symbols"`
 }
 
 type Rates struct {
-	Success bool               `json:"success"`
-	Base    string             `json:"base"`
-	Date    string             `json:"date"`
-	Rates   map[string]float64 `json:"rates"`
+	Base  string             `json:"base"`
+	Date  string             `json:"date"`
+	Rates map[string]float64 `json:"rates"`
 }
 
 type Amount struct {
-	Success bool                   `json:"success"`
-	Query   map[string]interface{} `json:"query"`
-	Info    map[string]interface{} `json:"info"`
-	Date    string                 `json:"date"`
-	Result  float64                `json:"result"`
+	Query  map[string]interface{} `json:"query"`
+	Info   map[string]interface{} `json:"info"`
+	Date   string                 `json:"date"`
+	Result float64                `json:"result"`
 }
 
 type TimeSriesRates struct {
-	Success bool                          `json:"success"`
+	Base    string                        `json:"base"`
 	StartAt string                        `json:"start_at"`
 	EndAt   string                        `json:"end_at"`
-	Base    string                        `json:"base"`
 	Rates   map[string]map[string]float64 `json:"rates"`
 }
 
@@ -43,7 +39,7 @@ func main() {
 	e := echo.New()
 	e.GET("/symbols", GetSymbols)
 	e.GET("/:date", GetHistoricalRates)
-	e.GET("/convert", Convert)
+	e.GET("/convert", GetConvertedAmount)
 	e.GET("/latest", GetLatestRates)
 	e.GET("/timeseries", GetTimeSriesRates)
 	e.Logger.Fatal(e.Start(":1323"))
@@ -59,7 +55,6 @@ func GetSymbols(e echo.Context) error {
 			symbols[c.ChildText("*[scope]")] = c.ChildText("td:nth-child(2)")
 		})
 		response = &Symbols{
-			Success: true,
 			Symbols: symbols,
 		}
 	})
@@ -82,17 +77,16 @@ func GetHistoricalRates(e echo.Context) error {
 			}
 		})
 		response = &Rates{
-			Success: true,
-			Base:    e.QueryParam("base"),
-			Date:    e.Param("date"),
-			Rates:   rates,
+			Base:  e.QueryParam("base"),
+			Date:  e.Param("date"),
+			Rates: rates,
 		}
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencytables/?from=%s&date=%s", e.QueryParam("base"), e.Param("date")))
 	return e.JSON(http.StatusOK, response)
 }
 
-func Convert(e echo.Context) error {
+func GetConvertedAmount(e echo.Context) error {
 	response := new(Amount)
 	c := colly.NewCollector()
 	c.SetRequestTimeout(60 * time.Second)
@@ -115,11 +109,10 @@ func Convert(e echo.Context) error {
 			"amount": amount,
 		}
 		response = &Amount{
-			Success: true,
-			Query:   query,
-			Info:    info,
-			Date:    time.Now().Format("2006-01-02"),
-			Result:  result,
+			Query:  query,
+			Info:   info,
+			Date:   time.Now().Format("2006-01-02"),
+			Result: result,
 		}
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencyconverter/convert/?Amount=%s&From=%s&To=%s", e.QueryParam("amount"), e.QueryParam("from"), e.QueryParam("to")))
@@ -140,10 +133,9 @@ func GetLatestRates(e echo.Context) error {
 		c.Visit(fmt.Sprintf("https://www.xe.com/currencyconverter/convert/?Amount=10&From=%s&To=%s", e.QueryParam("base"), symbol))
 	}
 	response = &Rates{
-		Success: true,
-		Base:    e.QueryParam("base"),
-		Date:    time.Now().Format("2006-01-02"),
-		Rates:   rates,
+		Base:  e.QueryParam("base"),
+		Date:  time.Now().Format("2006-01-02"),
+		Rates: rates,
 	}
 	return e.JSON(http.StatusOK, response)
 }
@@ -157,9 +149,7 @@ func GetTimeSriesRates(e echo.Context) error {
 	c := colly.NewCollector()
 	c.SetRequestTimeout(60 * time.Second)
 	for {
-		x := startAt.Before(endAt)
-		y := startAt.Equal(endAt)
-		if x || y {
+		if startAt.Before(endAt) || startAt.Equal(endAt) {
 			c.OnHTML("table.currencytables__Table-sc-xlq26m-3 > tbody", func(c *colly.HTMLElement) {
 				c.ForEach("tr", func(_ int, c *colly.HTMLElement) {
 					for _, symbol := range strings.Split(e.QueryParam("symbols"), ",") {
@@ -178,7 +168,6 @@ func GetTimeSriesRates(e echo.Context) error {
 		}
 	}
 	response = &TimeSriesRates{
-		Success: true,
 		StartAt: e.QueryParam("start_at"),
 		EndAt:   e.QueryParam("end_at"),
 		Base:    e.QueryParam("base"),
