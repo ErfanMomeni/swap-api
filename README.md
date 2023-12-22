@@ -1,12 +1,14 @@
 # swap
 
-swap is a free API for current and historical foreign exchange rates [scraped from Xe](https://www.xe.com).
+Current and historical foreign exchange rates [published by the Xe](https://www.xe.com).
 
-## Installing
+## Installation
 
 To start using swap, install Go and run `go mod tidy`.
 
 ## Usage
+
+Run `go run main.go`.
 
 Get the latest foreign exchange rates.
 
