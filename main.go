@@ -100,14 +100,18 @@ func GetHistoricalRates(e echo.Context) error {
 func GetConvertedCurrency(e echo.Context) error {
 	response := new(ConvertedCurrency)
 	info := make(map[string]interface{})
-	query := make(map[string]interface{})
+	amount, _ := strconv.ParseFloat(e.QueryParam("amount"), 64)
+	query := map[string]interface{}{
+		"amount": amount,
+		"from":   e.QueryParam("from"),
+		"to":     e.QueryParam("to"),
+	}
 	var result float64
 	c := colly.NewCollector()
 	c.SetRequestTimeout(60 * time.Second)
 	c.OnHTML("body", func(c *colly.HTMLElement) {
 		data := strings.Split(c.ChildText(".result__BigRate-sc-1bsijpp-1.dPdXSB"), " ")
 		result, _ = strconv.ParseFloat(strings.Replace(data[0], ",", "", -1), 64)
-		amount, _ := strconv.ParseFloat(e.QueryParam("amount"), 64)
 		rate := result / amount
 		data = strings.Split(c.ChildText("div.result__LiveSubText-sc-1bsijpp-2.jcIWiH"), "updated ")
 		data = strings.Split(data[1], " ")
@@ -115,12 +119,9 @@ func GetConvertedCurrency(e echo.Context) error {
 		timestamp := datetime.Unix()
 		info["rate"] = rate
 		info["timestamp"] = timestamp
-		query["from"] = e.QueryParam("from")
-		query["to"] = e.QueryParam("to")
-		query["amount"] = amount
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencyconverter/convert/?Amount=%s&From=%s&To=%s", e.QueryParam("amount"), e.QueryParam("from"), e.QueryParam("to")))
-	if len(info) != 0 && len(query) != 0 {
+	if result != 0 {
 		response = &ConvertedCurrency{
 			Success: true,
 			Query:   query,
@@ -187,9 +188,7 @@ func GetTimeSriesRates(e echo.Context) error {
 					})
 				})
 				c.Visit(fmt.Sprintf("https://www.xe.com/currencytables/?from=%s&date=%s", e.QueryParam("base"), startAt.Format("2006-01-02")))
-				if len(rates) != 0 {
-					allRates[startAt.Format("2006-01-02")] = rates
-				}
+				allRates[startAt.Format("2006-01-02")] = rates
 			}(startAt)
 			startAt = startAt.Add(24 * time.Hour)
 		} else {
