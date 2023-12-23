@@ -4,7 +4,7 @@ Current and historical foreign exchange rates [published by the Xe](https://www.
 
 ## Installation
 
-To start using swap, install Go and run `go mod tidy`.
+Install Go and run `go mod tidy`.
 
 ## Usage
 
