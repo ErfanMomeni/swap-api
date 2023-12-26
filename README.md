@@ -4,11 +4,15 @@ Current and historical foreign exchange rates [published by the Xe](https://www.
 
 ## Installation
 
-Install Go and run `go mod tidy`.
+```bash
+go mod tidy
+```
 
 ## Usage
 
-Run `go run main.go`.
+```bash
+go run main.go
+```
 
 Get the latest foreign exchange rates.
 
