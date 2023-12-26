@@ -115,8 +115,8 @@ func GetConvertedCurrency(e echo.Context) error {
 		rate := result / amount
 		data = strings.Split(c.ChildText("div.result__LiveSubText-sc-1bsijpp-2.jcIWiH"), "updated ")
 		data = strings.Split(data[1], " ")
-		datetime, _ := time.Parse("2006-Jan-02 15:04", fmt.Sprintf("%s-%s-%s %s", string(data[2][:4]), data[0], string(data[1][:2]), data[3]))
-		timestamp := datetime.Unix()
+		dateTime, _ := time.Parse("2006-Jan-02 15:04", fmt.Sprintf("%s-%s-%s %s", string(data[2][:4]), data[0], string(data[1][:2]), data[3]))
+		timestamp := dateTime.Unix()
 		info["rate"] = rate
 		info["timestamp"] = timestamp
 	})
