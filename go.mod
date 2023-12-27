@@ -1,4 +1,4 @@
-module github.com/ErfanMomeni/swap
+module github.com/ErfanMomeni/swap-api
 
 go 1.19
 
