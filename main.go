@@ -135,21 +135,24 @@ func GetConvertedCurrency(e echo.Context) error {
 
 func GetLatestRates(e echo.Context) error {
 	response := new(Rates)
+	mu := new(sync.Mutex)
 	rates := make(map[string]float64)
 	var wg sync.WaitGroup
 	for _, symbol := range strings.Split(e.QueryParam("symbols"), ",") {
 		wg.Add(1)
-		go func(symbol string) {
+		go func(symbol string, mu *sync.Mutex) {
 			defer wg.Done()
 			c := colly.NewCollector()
 			c.SetRequestTimeout(60 * time.Second)
 			c.OnHTML("body", func(c *colly.HTMLElement) {
 				data := strings.Split(c.ChildText(".result__BigRate-sc-1bsijpp-1.dPdXSB"), " ")
 				rate, _ := strconv.ParseFloat(strings.Replace(data[0], ",", "", -1), 64)
+				mu.Lock()
 				rates[symbol] = rate
+				mu.Unlock()
 			})
 			c.Visit(fmt.Sprintf("https://www.xe.com/currencyconverter/convert/?Amount=1&From=%s&To=%s", e.QueryParam("base"), symbol))
-		}(symbol)
+		}(symbol, mu)
 	}
 	wg.Wait()
 	if len(rates) != 0 {
@@ -165,16 +168,17 @@ func GetLatestRates(e echo.Context) error {
 
 func GetTimeSriesRates(e echo.Context) error {
 	response := new(TimeSriesRates)
+	mu := new(sync.Mutex)
 	allRates := make(map[string]map[string]float64)
-	rates := make(map[string]float64)
 	var wg sync.WaitGroup
 	startAt, _ := time.Parse("2006-01-02", e.QueryParam("start_at"))
 	endAt, _ := time.Parse("2006-01-02", e.QueryParam("end_at"))
 	for {
 		if startAt.Before(endAt) || startAt.Equal(endAt) {
 			wg.Add(1)
-			go func(startAt time.Time) {
+			go func(startAt time.Time, mu *sync.Mutex) {
 				defer wg.Done()
+				rates := make(map[string]float64)
 				c := colly.NewCollector()
 				c.SetRequestTimeout(60 * time.Second)
 				c.OnHTML("table.currencytables__Table-sc-xlq26m-3 > tbody", func(c *colly.HTMLElement) {
@@ -188,15 +192,17 @@ func GetTimeSriesRates(e echo.Context) error {
 					})
 				})
 				c.Visit(fmt.Sprintf("https://www.xe.com/currencytables/?from=%s&date=%s", e.QueryParam("base"), startAt.Format("2006-01-02")))
+				mu.Lock()
 				allRates[startAt.Format("2006-01-02")] = rates
-			}(startAt)
+				mu.Unlock()
+			}(startAt, mu)
 			startAt = startAt.Add(24 * time.Hour)
 		} else {
 			break
 		}
 	}
 	wg.Wait()
-	if len(rates) != 0 {
+	if len(allRates) != 0 {
 		response = &TimeSriesRates{
 			Success: true,
 			StartAt: e.QueryParam("start_at"),
