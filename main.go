@@ -13,27 +13,23 @@ import (
 )
 
 type Symbols struct {
-	Success bool              `json:"success"`
 	Symbols map[string]string `json:"symbols"`
 }
 
 type Rates struct {
-	Success bool               `json:"success"`
-	Base    string             `json:"base"`
-	Date    string             `json:"date"`
-	Rates   map[string]float64 `json:"rates"`
+	Base  string             `json:"base"`
+	Date  string             `json:"date"`
+	Rates map[string]float64 `json:"rates"`
 }
 
 type ConvertedCurrency struct {
-	Success bool                   `json:"success"`
-	Query   map[string]interface{} `json:"query"`
-	Info    map[string]interface{} `json:"info"`
-	Date    string                 `json:"date"`
-	Result  float64                `json:"result"`
+	Query  map[string]interface{} `json:"query"`
+	Info   map[string]interface{} `json:"info"`
+	Date   string                 `json:"date"`
+	Result float64                `json:"result"`
 }
 
 type TimeSriesRates struct {
-	Success bool                          `json:"success"`
 	Base    string                        `json:"base"`
 	StartAt string                        `json:"start_at"`
 	EndAt   string                        `json:"end_at"`
@@ -51,7 +47,6 @@ func main() {
 }
 
 func GetSymbols(e echo.Context) error {
-	response := new(Symbols)
 	symbols := make(map[string]string)
 	c := colly.NewCollector()
 	c.SetRequestTimeout(60 * time.Second)
@@ -61,17 +56,13 @@ func GetSymbols(e echo.Context) error {
 		})
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencytables/?from=USD&date=%s", time.Now().Add(-48*time.Hour).Format("2006-01-02")))
-	if len(symbols) != 0 {
-		response = &Symbols{
-			Success: true,
-			Symbols: symbols,
-		}
+	resp := &Symbols{
+		Symbols: symbols,
 	}
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusOK, resp)
 }
 
 func GetHistoricalRates(e echo.Context) error {
-	response := new(Rates)
 	rates := make(map[string]float64)
 	c := colly.NewCollector()
 	c.SetRequestTimeout(60 * time.Second)
@@ -86,19 +77,15 @@ func GetHistoricalRates(e echo.Context) error {
 		})
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencytables/?from=%s&date=%s", e.QueryParam("base"), e.Param("date")))
-	if len(rates) != 0 {
-		response = &Rates{
-			Success: true,
-			Base:    e.QueryParam("base"),
-			Date:    e.Param("date"),
-			Rates:   rates,
-		}
+	resp := &Rates{
+		Base:  e.QueryParam("base"),
+		Date:  e.Param("date"),
+		Rates: rates,
 	}
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusOK, resp)
 }
 
 func GetConvertedCurrency(e echo.Context) error {
-	response := new(ConvertedCurrency)
 	info := make(map[string]interface{})
 	amount, _ := strconv.ParseFloat(e.QueryParam("amount"), 64)
 	query := map[string]interface{}{
@@ -115,26 +102,28 @@ func GetConvertedCurrency(e echo.Context) error {
 		rate := result / amount
 		data = strings.Split(c.ChildText("div.result__LiveSubText-sc-1bsijpp-2.jcIWiH"), "updated ")
 		data = strings.Split(data[1], " ")
-		dateTime, _ := time.Parse("2006-Jan-02 15:04", fmt.Sprintf("%s-%s-%s %s", string(data[2][:4]), data[0], string(data[1][:2]), data[3]))
+		var d string
+		if len(data[1]) == 2 {
+			d = "0" + data[1][:1]
+		} else if len(data[1]) == 3 {
+			d = data[1][:2]
+		}
+		dateTime, _ := time.Parse("2006-Jan-02 15:04", fmt.Sprintf("%s-%s-%s %s", data[2][:4], data[0], d, data[3]))
 		timestamp := dateTime.Unix()
 		info["rate"] = rate
 		info["timestamp"] = timestamp
 	})
 	c.Visit(fmt.Sprintf("https://www.xe.com/currencyconverter/convert/?Amount=%s&From=%s&To=%s", e.QueryParam("amount"), e.QueryParam("from"), e.QueryParam("to")))
-	if result != 0 {
-		response = &ConvertedCurrency{
-			Success: true,
-			Query:   query,
-			Info:    info,
-			Date:    time.Now().Format("2006-01-02"),
-			Result:  result,
-		}
+	resp := &ConvertedCurrency{
+		Query:  query,
+		Info:   info,
+		Date:   time.Now().Format("2006-01-02"),
+		Result: result,
 	}
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusOK, resp)
 }
 
 func GetLatestRates(e echo.Context) error {
-	response := new(Rates)
 	mu := new(sync.Mutex)
 	rates := make(map[string]float64)
 	var wg sync.WaitGroup
@@ -155,19 +144,15 @@ func GetLatestRates(e echo.Context) error {
 		}(symbol, mu)
 	}
 	wg.Wait()
-	if len(rates) != 0 {
-		response = &Rates{
-			Success: true,
-			Base:    e.QueryParam("base"),
-			Date:    time.Now().Format("2006-01-02"),
-			Rates:   rates,
-		}
+	resp := &Rates{
+		Base:  e.QueryParam("base"),
+		Date:  time.Now().Format("2006-01-02"),
+		Rates: rates,
 	}
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusOK, resp)
 }
 
 func GetTimeSriesRates(e echo.Context) error {
-	response := new(TimeSriesRates)
 	mu := new(sync.Mutex)
 	allRates := make(map[string]map[string]float64)
 	var wg sync.WaitGroup
@@ -202,14 +187,11 @@ func GetTimeSriesRates(e echo.Context) error {
 		}
 	}
 	wg.Wait()
-	if len(allRates) != 0 {
-		response = &TimeSriesRates{
-			Success: true,
-			StartAt: e.QueryParam("start_at"),
-			EndAt:   e.QueryParam("end_at"),
-			Base:    e.QueryParam("base"),
-			Rates:   allRates,
-		}
+	resp := &TimeSriesRates{
+		StartAt: e.QueryParam("start_at"),
+		EndAt:   e.QueryParam("end_at"),
+		Base:    e.QueryParam("base"),
+		Rates:   allRates,
 	}
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusOK, resp)
 }
