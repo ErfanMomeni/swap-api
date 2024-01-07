@@ -1,4 +1,4 @@
-# swap-api
+# swap
 
 Current and historical foreign exchange rates [published by the Xe](https://www.xe.com).
 
