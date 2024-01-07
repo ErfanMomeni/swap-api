@@ -12,29 +12,28 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Symbols struct {
-	Symbols map[string]string `json:"symbols"`
-}
-
-type Rates struct {
-	Base  string             `json:"base"`
-	Date  string             `json:"date"`
-	Rates map[string]float64 `json:"rates"`
-}
-
-type ConvertedCurrency struct {
-	Query  map[string]interface{} `json:"query"`
-	Info   map[string]interface{} `json:"info"`
-	Date   string                 `json:"date"`
-	Result float64                `json:"result"`
-}
-
-type TimeSriesRates struct {
-	Base    string                        `json:"base"`
-	StartAt string                        `json:"start_at"`
-	EndAt   string                        `json:"end_at"`
-	Rates   map[string]map[string]float64 `json:"rates"`
-}
+type (
+	Symbols struct {
+		Symbols map[string]string `json:"symbols"`
+	}
+	Rates struct {
+		Base  string             `json:"base"`
+		Date  string             `json:"date"`
+		Rates map[string]float64 `json:"rates"`
+	}
+	ConvertedCurrency struct {
+		Query  map[string]interface{} `json:"query"`
+		Info   map[string]interface{} `json:"info"`
+		Date   string                 `json:"date"`
+		Result float64                `json:"result"`
+	}
+	TimeSriesRates struct {
+		Base    string                        `json:"base"`
+		StartAt string                        `json:"start_at"`
+		EndAt   string                        `json:"end_at"`
+		Rates   map[string]map[string]float64 `json:"rates"`
+	}
+)
 
 func main() {
 	e := echo.New()
